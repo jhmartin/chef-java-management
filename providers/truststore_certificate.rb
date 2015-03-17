@@ -22,12 +22,14 @@ action :import do
   keystore = new_resource.keystore || "#{node['java']['java_home']}/jre/lib/security/cacerts"
   keytool = new_resource.keytool || "#{node['java']['java_home']}/jre/bin/keytool"
   storepass = new_resource.storepass || node['java-management']['truststore']['storepass']
-
+  
+  existingkey = system("#{keytool} -list -alias #{new_resource.alias} -keystore #{keystore} -storepass #{storepass}")
+  
   execute "import_trustcacert_#{new_resource.alias}" do
     command "#{keytool} -importcert -noprompt -trustcacerts -alias #{new_resource.alias} -file #{new_resource.file} -keystore #{keystore} -storepass #{storepass}"
     action :run
     only_if { ::File.exist?(new_resource.file) }
-    not_if "#{keytool} -list -alias #{new_resource.alias} -keystore #{keystore} -storepass #{storepass}"
+    not_if { existingkey }
   end
-  new_resource.updated_by_last_action(true)
+  new_resource.updated_by_last_action(! existingkey)
 end
